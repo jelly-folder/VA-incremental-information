@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FuturePay - VA增量信息管理</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #1677FF;
+    --primary-light: #E8F4FF;
+    --primary-hover: #0958D9;
+    --danger: #FF4D4F;
+    --success: #52C41A;
+    --warning: #FAAD14;
+    --text-primary: #1A1A2E;
+    --text-secondary: #595959;
+    --text-muted: #8C8C8C;
+    --border: #E8E8E8;
+    --bg-page: #F5F6FA;
+    --bg-white: #FFFFFF;
+    --bg-hover: #F5F5F5;
+    --sidebar-bg: #001529;
+    --sidebar-submenu: #000C17;
+    --header-h: 56px;
+    --sidebar-w: 220px;
+    --radius: 6px;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.18);
+  }
+
+  body {
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    display: flex; flex-direction: column;
+    flex-shrink: 0; height: 100vh;
+    overflow-y: auto; overflow-x: hidden;
+    transition: width 0.2s; z-index: 100;
+  }
+  .sidebar-logo {
+    height: var(--header-h); display: flex; align-items: center;
+    padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+  }
+  .logo-icon { width:28px;height:28px;background:var(--primary);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:13px;margin-right:10px; }
+  .logo-text { color:#fff;font-weight:600;font-size:15px;white-space:nowrap; }
+  .sidebar-nav { flex:1;padding:8px 0; }
+  .nav-item { display:flex;align-items:center;padding:0 16px;height:40px;cursor:pointer;color:rgba(255,255,255,0.65);transition:all .15s;white-space:nowrap;user-select:none;font-size:13.5px; }
+  .nav-item:hover { color:#fff;background:rgba(255,255,255,0.06); }
+  .nav-item.group-header { font-weight:500;color:rgba(255,255,255,0.85); }
+  .nav-item.group-header.expanded { color:var(--primary); }
+  .nav-item .nav-icon { margin-right:10px;flex-shrink:0; }
+  .nav-item .nav-arrow { margin-left:auto;transition:transform .2s;font-size:11px;color:rgba(255,255,255,0.4); }
+  .nav-item.expanded .nav-arrow { transform:rotate(180deg); }
+  .submenu { background:var(--sidebar-submenu);overflow:hidden;max-height:0;transition:max-height .25s ease; }
+  .submenu.open { max-height:700px; }
+  .submenu-item { display:flex;align-items:center;padding:0 16px 0 42px;height:36px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;transition:all .15s;white-space:nowrap; }
+  .submenu-item:hover { color:#fff;background:rgba(255,255,255,0.04); }
+  .submenu-item.active { color:var(--primary);background:rgba(22,119,255,0.12); }
+
+  /* ===== MAIN ===== */
+  .main { flex:1;display:flex;flex-direction:column;overflow:hidden; }
+  .topbar { height:var(--header-h);background:var(--bg-white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;flex-shrink:0;box-shadow:var(--shadow-sm);z-index:10; }
+  .collapse-btn { width:32px;height:32px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:var(--radius);color:var(--text-secondary);transition:background .15s;margin-right:12px; }
+  .collapse-btn:hover { background:var(--bg-hover); }
+  .breadcrumb { display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:13px; }
+  .breadcrumb .sep { color:var(--border); }
+  .breadcrumb .current { color:var(--text-primary);font-weight:500; }
+  .topbar-actions { margin-left:auto;display:flex;align-items:center;gap:12px; }
+  .topbar-icon-btn { width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:16px; }
+  .avatar { width:32px;height:32px;background:var(--primary);border-radius:50%;color:#fff;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer; }
+
+  .content { flex:1;overflow-y:auto;padding:20px; }
+  .view { display:none; }
+  .view.active { display:block; }
+
+  /* ===== LIST ===== */
+  .page-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
+  .page-title { font-size:20px;font-weight:600; }
+  .card { background:var(--bg-white);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--border); }
+
+  .filter-bar { padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;flex-wrap:wrap;gap:12px; }
+  .filter-item { display:flex;align-items:center;gap:8px; }
+  .filter-label { color:var(--text-secondary);font-size:13px;white-space:nowrap; }
+  .filter-input, .filter-select { height:32px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text-primary);background:var(--bg-white);outline:none;transition:border .15s;font-family:inherit; }
+  .filter-input { padding:0 10px;min-width:160px; }
+  .filter-input:focus { border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,0.12); }
+  .filter-select { padding:0 28px 0 10px;min-width:120px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238C8C8C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center; }
+  .filter-select:focus { border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,0.12); }
+  .filter-actions { display:flex;gap:8px;margin-left:auto; }
+
+  .btn { height:32px;padding:0 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;border:1px solid transparent;font-family:inherit;white-space:nowrap; }
+  .btn-primary { background:var(--primary);color:#fff;border-color:var(--primary); }
+  .btn-primary:hover { background:var(--primary-hover);border-color:var(--primary-hover); }
+  .btn-default { background:var(--bg-white);color:var(--text-secondary);border-color:var(--border); }
+  .btn-default:hover { border-color:var(--primary);color:var(--primary); }
+  .btn-link { background:none;border:none;padding:0;height:auto;font-size:13px;cursor:pointer;font-family:inherit; }
+  .btn-link-primary { color:var(--primary); }
+  .btn-link-primary:hover { color:var(--primary-hover); }
+  .btn-link-danger { color:var(--danger); }
+
+  .table-toolbar { padding:12px 20px;display:flex;align-items:center;justify-content:flex-end;gap:8px;border-bottom:1px solid var(--border); }
+  .icon-btn { width:30px;height:30px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-white);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all .15s;font-size:14px; }
+  .icon-btn:hover { border-color:var(--primary);color:var(--primary); }
+
+  .table-wrap { overflow-x:auto; }
+  table { width:100%;border-collapse:collapse;font-size:13px; }
+  thead th { background:#FAFAFA;padding:12px 16px;text-align:left;color:var(--text-secondary);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap; }
+  tbody tr { border-bottom:1px solid var(--border);transition:background .12s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:#FAFCFF; }
+  tbody td { padding:12px 16px;vertical-align:middle;white-space:nowrap; }
+
+  .tag { display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:500; }
+  .tag-blue { background:#E8F4FF;color:var(--primary); }
+  .tag-orange { background:#FFF7E6;color:var(--warning); }
+
+  .toggle { position:relative;display:inline-flex;align-items:center;cursor:pointer; }
+  .toggle input { display:none; }
+  .toggle-track { width:44px;height:22px;border-radius:11px;background:#D9D9D9;transition:background .2s;position:relative;display:flex;align-items:center; }
+  .toggle input:checked + .toggle-track { background:var(--primary); }
+  .toggle-thumb { position:absolute;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:left .2s; }
+  .toggle input:checked + .toggle-track .toggle-thumb { left:24px; }
+
+  .pagination { padding:14px 20px;display:flex;align-items:center;justify-content:flex-end;gap:8px;border-top:1px solid var(--border); }
+  .pagination-info { color:var(--text-muted);font-size:13px;margin-right:auto; }
+  .page-btn { min-width:32px;height:32px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-primary);transition:all .15s;padding:0 8px; }
+  .page-btn:hover { border-color:var(--primary);color:var(--primary); }
+  .page-btn.active { background:var(--primary);border-color:var(--primary);color:#fff; }
+  .empty-state { padding:48px 20px;text-align:center;color:var(--text-muted); }
+
+  /* ===== STEP VIEW ===== */
+  #view-step { background:var(--bg-white);margin:-20px;min-height:calc(100% + 40px); }
+  .step-topbar { height:var(--header-h);display:flex;align-items:center;padding:0 32px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-white);z-index:50; }
+  .step-close-btn { width:28px;height:28px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-secondary);margin-right:16px;transition:color .15s;border-radius:4px; }
+  .step-close-btn:hover { color:var(--text-primary);background:var(--bg-hover); }
+  .step-page-title { font-size:15px;font-weight:600; }
+
+  /* Step 1 */
+  .step-body { max-width:560px;margin:0 auto;padding:48px 20px 60px; }
+  .step-section-title { font-size:20px;font-weight:600;margin-bottom:28px; }
+  .s1-field { margin-bottom:22px; }
+  .s1-label { font-size:13px;color:var(--text-secondary);margin-bottom:7px;display:block; }
+  .s1-input { width:100%;height:40px;border:1px solid var(--border);border-radius:var(--radius);padding:0 14px;font-size:14px;color:var(--text-primary);background:var(--bg-white);outline:none;font-family:inherit;transition:border .15s,box-shadow .15s; }
+  .s1-input:focus { border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,0.12); }
+  .s1-input:disabled { background:#F5F5F5;color:var(--text-muted);cursor:not-allowed; }
+  select.s1-input { appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238C8C8C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;cursor:pointer;padding-right:32px; }
+  .radio-group { display:flex;gap:24px;align-items:center;height:40px; }
+  .radio-item { display:flex;align-items:center;gap:7px;cursor:pointer;font-size:14px; }
+  .radio-item input[type=radio] { width:16px;height:16px;accent-color:var(--primary);cursor:pointer; }
+  .step-footer { display:flex;justify-content:flex-end;gap:10px;margin-top:40px; }
+  .btn-step { height:38px;padding:0 28px;font-size:14px;border-radius:6px; }
+
+  /* Step 2 */
+  .s2-body { max-width:960px;margin:0 auto;padding:48px 24px 60px; }
+  .s2-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px; }
+  .s2-title { font-size:20px;font-weight:600; }
+
+  .pay-tabs { display:flex;margin-bottom:20px; }
+  .pay-tab { padding:6px 20px;border:1px solid var(--border);background:var(--bg-white);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-secondary);transition:all .15s; }
+  .pay-tab:first-child { border-radius:var(--radius) 0 0 var(--radius); }
+  .pay-tab:last-child { border-radius:0 var(--radius) var(--radius) 0; }
+  .pay-tab+.pay-tab { border-left:none; }
+  .pay-tab.active { background:var(--primary);color:#fff;border-color:var(--primary); }
+
+  .bank-table { width:100%;border-collapse:collapse;font-size:13px; }
+  .bank-table thead th { background:#FAFAFA;padding:11px 14px;text-align:left;color:var(--text-secondary);font-weight:500;border:1px solid var(--border);white-space:nowrap; }
+  .bank-table tbody td { padding:13px 14px;border:1px solid var(--border);vertical-align:middle;color:var(--text-primary); }
+  .bank-table tbody tr:hover td { background:#FAFCFF; }
+
+  .inline-edit-val { margin-right:6px;color:var(--text-primary); }
+  .inline-edit-btn { color:var(--primary);cursor:pointer;font-size:12px; }
+  .inline-edit-btn:hover { color:var(--primary-hover);text-decoration:underline; }
+  .inline-del-btn { color:var(--danger);cursor:pointer;font-size:12px; }
+  .inline-del-btn:hover { text-decoration:underline; }
+
+  .tpl-cell { display:flex;align-items:center;gap:5px;flex-wrap:wrap; }
+  .tpl-tag { display:inline-flex;align-items:center;gap:3px;background:var(--primary-light);color:var(--primary);border-radius:4px;padding:2px 7px;font-size:12px; }
+  .tpl-tag .tpl-remove { cursor:pointer;font-size:14px;line-height:1;opacity:0.7; }
+  .tpl-tag .tpl-remove:hover { opacity:1; }
+
+  /* ===== MODAL ===== */
+  .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s; }
+  .modal-overlay.open { opacity:1;pointer-events:all; }
+  .modal { background:var(--bg-white);border-radius:8px;box-shadow:var(--shadow-lg);width:420px;max-width:95vw;transform:translateY(16px) scale(0.97);transition:transform .2s; }
+  .modal-overlay.open .modal { transform:none; }
+  .modal-header { padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+  .modal-title { font-size:15px;font-weight:600; }
+  .modal-close { width:28px;height:28px;border:none;background:none;cursor:pointer;border-radius:var(--radius);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:18px;transition:background .15s; }
+  .modal-close:hover { background:var(--bg-hover); }
+  .modal-body { padding:20px; }
+  .modal-footer { padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px; }
+
+  .bank-select-modal { width:520px; }
+  .bank-search, .tpl-search { width:100%;height:34px;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;font-size:13px;outline:none;font-family:inherit;margin-bottom:12px; }
+  .bank-search:focus, .tpl-search:focus { border-color:var(--primary); }
+  .bank-list { max-height:280px;overflow-y:auto; }
+  .bank-list-item { display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-radius:var(--radius);font-size:13px;transition:background .12s; }
+  .bank-list-item:hover { background:var(--bg-hover); }
+  .bank-list-item.selected { background:var(--primary-light);color:var(--primary); }
+  .bank-list-item input[type=checkbox] { accent-color:var(--primary);width:15px;height:15px; }
+
+  .confirm-modal-w { width:360px; }
+  .confirm-icon { font-size:36px;text-align:center;margin-bottom:10px; }
+  .confirm-title { font-size:15px;font-weight:600;text-align:center;margin-bottom:6px; }
+  .confirm-desc { font-size:13px;color:var(--text-secondary);text-align:center; }
+
+  .detail-modal-w { width:500px; }
+  .detail-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+  .detail-label { font-size:12px;color:var(--text-muted);margin-bottom:4px; }
+  .detail-value { font-size:13px;font-weight:500; }
+  .detail-divider { grid-column:1/-1;border:none;border-top:1px solid var(--border); }
+
+  /* ===== DRAWER ===== */
+  .drawer-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:900;opacity:0;pointer-events:none;transition:opacity .25s; }
+  .drawer-overlay.open { opacity:1;pointer-events:all; }
+  .drawer { position:fixed;top:0;right:0;bottom:0;width:400px;background:var(--bg-white);box-shadow:-4px 0 24px rgba(0,0,0,0.12);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:901; }
+  .drawer-overlay.open .drawer { transform:translateX(0); }
+  .drawer-header { padding:0 20px;height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+  .drawer-title { font-size:15px;font-weight:600; }
+  .drawer-close { width:28px;height:28px;border:none;background:none;cursor:pointer;border-radius:var(--radius);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:18px;transition:background .15s; }
+  .drawer-close:hover { background:var(--bg-hover); }
+  .drawer-body { flex:1;overflow-y:auto;padding:16px 20px; }
+  .drawer-footer { padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0; }
+
+  .tpl-item { display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:all .15s; }
+  .tpl-item:hover { border-color:var(--primary);background:var(--primary-light); }
+  .tpl-item.selected { border-color:var(--primary);background:var(--primary-light); }
+  .tpl-item input[type=checkbox] { accent-color:var(--primary);width:15px;height:15px;margin-top:2px;flex-shrink:0; }
+  .tpl-item-name { font-size:13px;font-weight:500; }
+  .tpl-item-desc { font-size:12px;color:var(--text-muted);margin-top:2px; }
+
+  /* ===== TOAST ===== */
+  .toast-container { position:fixed;top:72px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px; }
+  .toast { display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--bg-white);border-radius:var(--radius);box-shadow:var(--shadow-md);border-left:3px solid var(--primary);font-size:13px;min-width:220px;animation:slideIn .2s ease; }
+  .toast.success { border-color:var(--success); }
+  .toast.error { border-color:var(--danger); }
+  @keyframes slideIn { from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1} }
+
+  ::-webkit-scrollbar { width:6px;height:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#D9D9D9;border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:#BFBFBF; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">F</div>
+    <span class="logo-text">FuturePay</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item group-header" onclick="toggleGroup(this)">
+      <span class="nav-icon">⚙️</span>系统管理<span class="nav-arrow">▾</span>
+    </div>
+    <div class="submenu">
+      <div class="submenu-item">用户管理</div>
+      <div class="submenu-item">角色管理</div>
+    </div>
+    <div class="nav-item group-header expanded" onclick="toggleGroup(this)">
+      <span class="nav-icon">🗃️</span>基础数据维护<span class="nav-arrow">▾</span>
+    </div>
+    <div class="submenu open">
+      <div class="submenu-item" onclick="navOther(this,'业务类型管理')">业务类型管理</div>
+      <div class="submenu-item" onclick="navOther(this,'受益人信息')">受益人信息</div>
+      <div class="submenu-item" onclick="navOther(this,'资金来源管理')">资金来源管理</div>
+      <div class="submenu-item" onclick="navOther(this,'汇率源管理')">汇率源管理</div>
+      <div class="submenu-item" onclick="navOther(this,'国际货币管理')">国际货币管理</div>
+      <div class="submenu-item" onclick="navOther(this,'付款目的的管理')">付款目的的管理</div>
+      <div class="submenu-item" onclick="navOther(this,'国家管理')">国家管理</div>
+      <div class="submenu-item" onclick="navOther(this,'MCC类目信息管理')">MCC类目信息管理</div>
+      <div class="submenu-item" onclick="navOther(this,'银行信息管理')">银行信息管理</div>
+      <div class="submenu-item" onclick="navOther(this,'日历管理')">日历管理</div>
+      <div class="submenu-item" onclick="navOther(this,'标签管理')">标签管理</div>
+      <div class="submenu-item" onclick="navOther(this,'国家节假日管理')">国家节假日管理</div>
+      <div class="submenu-item" onclick="navOther(this,'交易编码管理')">交易编码管理</div>
+      <div class="submenu-item" onclick="navOther(this,'会计科目管理')">会计科目管理</div>
+      <div class="submenu-item" onclick="navOther(this,'入账规则管理')">入账规则管理</div>
+      <div class="submenu-item" onclick="navOther(this,'消息通知')">消息通知</div>
+      <div class="submenu-item" onclick="navOther(this,'KYC字段字典')">KYC字段字典</div>
+      <div class="submenu-item active" id="va-menu" onclick="navVA(this)">VA增量信息管理</div>
+    </div>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <button class="collapse-btn" onclick="toggleSidebar()">☰</button>
+    <nav class="breadcrumb">
+      <span>基础数据维护</span><span class="sep">/</span><span class="current" id="bc-current">VA增量信息管理</span>
+    </nav>
+    <div class="topbar-actions">
+      <button class="topbar-icon-btn">🌐</button>
+      <div class="avatar">杨</div>
+    </div>
+  </header>
+
+  <div class="content" id="main-content">
+
+    <!-- LIST VIEW -->
+    <div class="view active" id="view-list">
+      <div class="page-header">
+        <h1 class="page-title">VA增量信息管理</h1>
+        <button class="btn btn-primary" onclick="startAdd()">＋ 新增配置</button>
+      </div>
+      <div class="card">
+        <div class="filter-bar">
+          <div class="filter-item">
+            <span class="filter-label">银行名称：</span>
+            <input type="text" class="filter-input" id="search-bank" placeholder="请输入银行名称" oninput="filterTable()">
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">渠道：</span>
+            <select class="filter-select" id="filter-channel" onchange="filterTable()">
+              <option value="">全部</option>
+              <option>566-BPN</option><option>230-NIUM</option><option>549-RAIL</option><option>128-STRIPE</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">币种：</span>
+            <select class="filter-select" id="filter-currency" onchange="filterTable()">
+              <option value="">全部</option>
+              <option>USD</option><option>EUR</option><option>GBP</option><option>CNY</option><option>JPY</option><option>HKD</option><option>SGD</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">业务类型：</span>
+            <select class="filter-select" id="filter-biz" onchange="filterTable()">
+              <option value="">全部</option><option>收款</option><option>付款</option><option>换汇</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">商户类型：</span>
+            <select class="filter-select" id="filter-merchant" onchange="filterTable()">
+              <option value="">全部</option><option>个人</option><option>企业</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-default" onclick="resetFilter()">重 置</button>
+            <button class="btn btn-primary" onclick="filterTable()">查 询</button>
+          </div>
+        </div>
+        <div class="table-toolbar">
+          <button class="icon-btn" onclick="showToast('已刷新','success')">↻</button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>渠道</th><th>银行名称</th><th>支付方式</th><th>币种</th><th>业务类型</th><th>商户类型</th><th>模板名称</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+          <div id="empty-state" class="empty-state" style="display:none">
+            <div style="font-size:40px;margin-bottom:12px">📭</div><div>暂无数据</div>
+          </div>
+        </div>
+        <div class="pagination">
+          <span class="pagination-info" id="pagination-info">共 0 条</span>
+          <button class="page-btn" onclick="changePage(-1)">＜</button>
+          <button class="page-btn active" id="page-num">1</button>
+          <button class="page-btn" onclick="changePage(1)">＞</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OTHER VIEW -->
+    <div class="view" id="view-other">
+      <div class="page-header"><h1 class="page-title" id="other-title">页面</h1></div>
+      <div class="card" style="padding:60px;text-align:center;color:var(--text-muted)">
+        <div style="font-size:40px;margin-bottom:12px">🚧</div><div>该页面正在建设中</div>
+      </div>
+    </div>
+
+    <!-- STEP VIEW (full-page) -->
+    <div class="view" id="view-step" style="background:var(--bg-white);margin:-20px;min-height:calc(100% + 40px)">
+      <div class="step-topbar">
+        <button class="step-close-btn" onclick="cancelStep()">✕</button>
+        <span class="step-page-title">VA增量信息</span>
+      </div>
+
+      <!-- STEP 1 -->
+      <div id="step1-wrap">
+        <div class="step-body">
+          <div class="step-section-title">基本信息</div>
+          <div class="s1-field">
+            <label class="s1-label">渠道名称</label>
+            <select class="s1-input" id="s1-channel">
+              <option value="">请选择渠道</option>
+              <option value="SENT_BIZ">SENT_BIZ</option>
+              <option value="566-BPN">566 - BPN</option>
+              <option value="230-NIUM">230 - NIUM</option>
+              <option value="549-RAIL">549 - RAIL</option>
+              <option value="128-STRIPE">128 - STRIPE</option>
+            </select>
+          </div>
+          <div class="s1-field">
+            <label class="s1-label">增量信息名称</label>
+            <input type="text" class="s1-input" id="s1-name" placeholder="请输入增量信息名称">
+          </div>
+          <div class="s1-field">
+            <label class="s1-label">增量信息描述</label>
+            <input type="text" class="s1-input" id="s1-desc" placeholder="请输入增量信息描述">
+          </div>
+          <div class="s1-field">
+            <label class="s1-label">启用状态</label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="s1-status" value="on" checked> 开启</label>
+              <label class="radio-item"><input type="radio" name="s1-status" value="off"> 关闭</label>
+            </div>
+          </div>
+          <div class="step-footer">
+            <button class="btn btn-primary btn-step" onclick="goStep2()">下一步</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div id="step2-wrap" style="display:none">
+        <div class="s2-body">
+          <div class="s2-header">
+            <span class="s2-title">VA收款银行信息</span>
+            <button class="btn btn-primary" onclick="openBankSelect()">选择收款银行</button>
+          </div>
+          <div class="pay-tabs" id="pay-tabs">
+            <div class="pay-tab active" data-method="LOCAL" onclick="switchPayTab(this)">LOCAL</div>
+            <div class="pay-tab" data-method="SWIFT" onclick="switchPayTab(this)">SWIFT</div>
+            <div class="pay-tab" data-method="WALLET" onclick="switchPayTab(this)">WALLET</div>
+          </div>
+          <table class="bank-table">
+            <thead>
+              <tr>
+                <th>银行名称</th>
+                <th>适用收款币种</th>
+                <th>适用收款国家/地区</th>
+                <th>商户类型</th>
+                <th>业务类型</th>
+                <th>配置模板</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="bank-body"></tbody>
+          </table>
+          <div id="bank-empty" style="padding:36px;text-align:center;color:var(--text-muted);border:1px solid var(--border);border-top:none;display:none">
+            暂无银行信息，请点击【选择收款银行】添加
+          </div>
+          <div class="step-footer">
+            <button class="btn btn-default btn-step" onclick="goStep1()">返 回</button>
+            <button class="btn btn-primary btn-step" onclick="saveAll()">保 存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: Bank Select -->
+<div class="modal-overlay" id="bank-modal">
+  <div class="modal bank-select-modal">
+    <div class="modal-header">
+      <span class="modal-title">选择收款银行</span>
+      <button class="modal-close" onclick="closeModal('bank-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="bank-search" placeholder="搜索银行名称..." oninput="filterBankList(this.value)">
+      <div class="bank-list" id="bank-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('bank-modal')">取 消</button>
+      <button class="btn btn-primary" onclick="confirmBankSelect()">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Inline Edit -->
+<div class="modal-overlay" id="inline-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="inline-modal-title">编辑</span>
+      <button class="modal-close" onclick="closeModal('inline-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="inline-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('inline-modal')">取 消</button>
+      <button class="btn btn-primary" onclick="saveInlineEdit()">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirm Delete (list) -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal confirm-modal-w">
+    <div class="modal-header">
+      <span class="modal-title">确认删除</span>
+      <button class="modal-close" onclick="closeModal('confirm-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:24px 20px">
+      <div class="confirm-icon">⚠️</div>
+      <div class="confirm-title">确认删除此配置？</div>
+      <div class="confirm-desc">删除后将无法恢复，请谨慎操作。</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('confirm-modal')">取 消</button>
+      <button class="btn" style="background:var(--danger);color:#fff;border-color:var(--danger)" onclick="confirmDelete()">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Detail -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal detail-modal-w">
+    <div class="modal-header">
+      <span class="modal-title">配置详情</span>
+      <button class="modal-close" onclick="closeModal('detail-modal')">✕</button>
+    </div>
+    <div class="modal-body"><div class="detail-grid" id="detail-content"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('detail-modal')">关 闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER: Template Picker -->
+<div class="drawer-overlay" id="tpl-drawer">
+  <div class="drawer">
+    <div class="drawer-header">
+      <span class="drawer-title">选择配置模板</span>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body">
+      <input type="text" class="tpl-search" placeholder="搜索模板名称..." oninput="filterTplList(this.value)">
+      <div id="tpl-list"></div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn btn-default" onclick="closeDrawer()">取 消</button>
+      <button class="btn btn-primary" onclick="confirmTplSelect()">确 定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ===================================================
+// DATA
+// ===================================================
+const TEMPLATES = [
+  { id:'t1', name:'BPN-LOCAL-USD模板', desc:'适用于BPN渠道LOCAL支付方式USD结算' },
+  { id:'t2', name:'BPN-SWIFT-EUR模板', desc:'适用于BPN渠道SWIFT支付方式EUR结算' },
+  { id:'t3', name:'NIUM-WALLET-SGD模板', desc:'适用于NIUM渠道Wallet SGD结算' },
+  { id:'t4', name:'NIUM-LOCAL-CNY模板', desc:'适用于NIUM渠道LOCAL CNY结算' },
+  { id:'t5', name:'RAIL-SWIFT-GBP模板', desc:'适用于RAIL渠道SWIFT GBP结算' },
+  { id:'t6', name:'通用开户模板A', desc:'通用开户配置模板，适用多种场景' },
+  { id:'t7', name:'企业标准开户模板', desc:'适用企业类型商户标准开户流程' },
+  { id:'t8', name:'个人快捷开户模板', desc:'适用个人类型商户快速开户' },
+];
+
+const ALL_BANKS = [
+  { id:'b1', name:'Bank for Investment and Development of Vietnam' },
+  { id:'b2', name:'Welcome Bank' },
+  { id:'b3', name:'Shinhan Bank' },
+  { id:'b4', name:'汇丰银行 (HSBC)' },
+  { id:'b5', name:'渣打银行 (Standard Chartered)' },
+  { id:'b6', name:'花旗银行 (Citibank)' },
+  { id:'b7', name:'摩根大通 (JPMorgan)' },
+  { id:'b8', name:'星展银行 (DBS)' },
+];
+
+let tableData = [
+  { id:1, channel:'566-BPN', bank:'汇丰银行', payMethod:'LOCAL', currency:'USD', bizType:'收款', merchantType:'个人,企业', templateName:'BPN-LOCAL-USD模板', status:true },
+  { id:2, channel:'566-BPN', bank:'渣打银行', payMethod:'SWIFT', currency:'EUR', bizType:'付款', merchantType:'企业', templateName:'BPN-SWIFT-EUR模板', status:true },
+  { id:3, channel:'230-NIUM', bank:'星展银行', payMethod:'WALLET', currency:'SGD', bizType:'收款', merchantType:'个人', templateName:'NIUM-WALLET-SGD模板', status:false },
+  { id:4, channel:'230-NIUM', bank:'花旗银行', payMethod:'LOCAL', currency:'CNY', bizType:'换汇', merchantType:'个人,企业', templateName:'NIUM-LOCAL-CNY模板', status:true },
+  { id:5, channel:'549-RAIL', bank:'摩根大通', payMethod:'SWIFT', currency:'GBP', bizType:'收款', merchantType:'企业', templateName:'RAIL-SWIFT-GBP模板', status:true },
+  { id:6, channel:'549-RAIL', bank:'招商银行', payMethod:'LOCAL', currency:'USD', bizType:'付款', merchantType:'个人', templateName:'通用开户模板A', status:false },
+];
+let filteredData = [...tableData];
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let deletingId = null;
+
+// Step state
+let step1Data = {};
+let bankRows = [];  // { bankId, bankName, method, currency, country, merchantType, bizType, templates:[] }
+let currentPayMethod = 'LOCAL';
+
+// Inline edit state
+let inlineField = null;
+let inlineBankId = null;
+
+// Drawer state
+let drawerTargetBankId = null;
+let drawerSelectedTpls = [];
+
+// Bank modal state
+let tempSelectedBanks = [];
+
+// ===================================================
+// SIDEBAR
+// ===================================================
+function toggleGroup(el) {
+  const sub = el.nextElementSibling;
+  const open = sub.classList.contains('open');
+  el.classList.toggle('expanded', !open);
+  sub.classList.toggle('open', !open);
+}
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  s.style.width = parseInt(getComputedStyle(s).width) > 60 ? '0' : '220px';
+}
+function navOther(el, title) {
+  setActiveMenu(el);
+  showView('view-other');
+  document.getElementById('other-title').textContent = title;
+  document.getElementById('bc-current').textContent = title;
+}
+function navVA(el) {
+  setActiveMenu(el);
+  showView('view-list');
+  document.getElementById('bc-current').textContent = 'VA增量信息管理';
+}
+function setActiveMenu(el) {
+  document.querySelectorAll('.submenu-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('main-content').scrollTop = 0;
+}
+
+// ===================================================
+// LIST TABLE
+// ===================================================
+function renderTable() {
+  const body = document.getElementById('table-body');
+  const empty = document.getElementById('empty-state');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filteredData.slice(start, start + PAGE_SIZE);
+  document.getElementById('pagination-info').textContent = `共 ${filteredData.length} 条`;
+  if (!filteredData.length) { body.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  body.innerHTML = page.map(row => `
+    <tr>
+      <td>${row.channel}</td>
+      <td>${row.bank}</td>
+      <td><span class="tag tag-blue">${row.payMethod}</span></td>
+      <td><span class="tag tag-orange">${row.currency}</span></td>
+      <td>${row.bizType}</td>
+      <td>${row.merchantType}</td>
+      <td>${row.templateName}</td>
+      <td>
+        <label class="toggle" onclick="toggleRowStatus(event,${row.id})">
+          <input type="checkbox" ${row.status?'checked':''} onclick="return false">
+          <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        </label>
+        <span style="margin-left:6px;font-size:12px;color:${row.status?'var(--primary)':'var(--text-muted)'}">${row.status?'开启':'关闭'}</span>
+      </td>
+      <td>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-link btn-link-primary" onclick="openDetail(${row.id})">详情</button>
+          <button class="btn btn-link btn-link-primary" onclick="startEdit(${row.id})">编辑</button>
+          <button class="btn btn-link btn-link-danger" onclick="openDeleteConfirm(${row.id})">删除</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function toggleRowStatus(e, id) {
+  e.stopPropagation();
+  setTimeout(() => {
+    const row = tableData.find(r => r.id === id);
+    if (row) { row.status = !row.status; renderTable(); showToast(row.status?'已开启':'已关闭','success'); }
+  }, 0);
+}
+function filterTable() {
+  const bank = document.getElementById('search-bank').value.toLowerCase();
+  const ch = document.getElementById('filter-channel').value;
+  const cu = document.getElementById('filter-currency').value;
+  const biz = document.getElementById('filter-biz').value;
+  const mer = document.getElementById('filter-merchant').value;
+  filteredData = tableData.filter(r =>
+    (!bank || r.bank.toLowerCase().includes(bank)) &&
+    (!ch || r.channel === ch) && (!cu || r.currency === cu) &&
+    (!biz || r.bizType === biz) && (!mer || r.merchantType.includes(mer))
+  );
+  currentPage = 1;
+  renderTable();
+}
+function resetFilter() {
+  document.getElementById('search-bank').value = '';
+  ['filter-channel','filter-currency','filter-biz','filter-merchant'].forEach(id => document.getElementById(id).value = '');
+  filteredData = [...tableData];
+  currentPage = 1;
+  renderTable();
+}
+function changePage(dir) {
+  const total = Math.ceil(filteredData.length / PAGE_SIZE) || 1;
+  currentPage = Math.max(1, Math.min(total, currentPage + dir));
+  document.getElementById('page-num').textContent = currentPage;
+  renderTable();
+}
+function openDetail(id) {
+  const row = tableData.find(r => r.id === id);
+  document.getElementById('detail-content').innerHTML = `
+    <div><div class="detail-label">渠道</div><div class="detail-value">${row.channel}</div></div>
+    <div><div class="detail-label">银行名称</div><div class="detail-value">${row.bank}</div></div>
+    <div><div class="detail-label">支付方式</div><div class="detail-value"><span class="tag tag-blue">${row.payMethod}</span></div></div>
+    <div><div class="detail-label">币种</div><div class="detail-value"><span class="tag tag-orange">${row.currency}</span></div></div>
+    <div><div class="detail-label">业务类型</div><div class="detail-value">${row.bizType}</div></div>
+    <div><div class="detail-label">商户类型</div><div class="detail-value">${row.merchantType}</div></div>
+    <hr class="detail-divider">
+    <div style="grid-column:1/-1"><div class="detail-label">模板名称</div><div class="detail-value">${row.templateName}</div></div>
+    <div><div class="detail-label">状态</div><div class="detail-value" style="color:${row.status?'var(--success)':'var(--text-muted)'}">● ${row.status?'开启':'关闭'}</div></div>
+  `;
+  openModal('detail-modal');
+}
+function openDeleteConfirm(id) { deletingId = id; openModal('confirm-modal'); }
+function confirmDelete() {
+  tableData = tableData.filter(r => r.id !== deletingId);
+  filteredData = filteredData.filter(r => r.id !== deletingId);
+  renderTable(); closeModal('confirm-modal'); showToast('删除成功','success');
+}
+
+// ===================================================
+// STEP FLOW
+// ===================================================
+function startAdd() {
+  resetStepState();
+  showView('view-step');
+}
+function startEdit(id) {
+  resetStepState();
+  const row = tableData.find(r => r.id === id);
+  if (row) {
+    document.getElementById('s1-channel').value = row.channel;
+    document.getElementById('s1-name').value = row.templateName;
+    document.getElementById('s1-desc').value = row.bizType;
+    document.querySelector(`input[name="s1-status"][value="${row.status?'on':'off'}"]`).checked = true;
+  }
+  showView('view-step');
+}
+function resetStepState() {
+  document.getElementById('s1-channel').value = '';
+  document.getElementById('s1-name').value = '';
+  document.getElementById('s1-desc').value = '';
+  document.querySelector('input[name="s1-status"][value="on"]').checked = true;
+  bankRows = [];
+  currentPayMethod = 'LOCAL';
+  document.querySelectorAll('.pay-tab').forEach(t => t.classList.toggle('active', t.dataset.method === 'LOCAL'));
+  document.getElementById('step1-wrap').style.display = '';
+  document.getElementById('step2-wrap').style.display = 'none';
+}
+function cancelStep() { showView('view-list'); }
+
+function goStep2() {
+  const ch = document.getElementById('s1-channel').value;
+  const name = document.getElementById('s1-name').value.trim();
+  if (!ch) { showToast('请选择渠道名称','error'); return; }
+  if (!name) { showToast('请输入增量信息名称','error'); return; }
+  step1Data = {
+    channel: ch, name,
+    desc: document.getElementById('s1-desc').value.trim(),
+    status: document.querySelector('input[name="s1-status"]:checked').value === 'on'
+  };
+  document.getElementById('step1-wrap').style.display = 'none';
+  document.getElementById('step2-wrap').style.display = '';
+  document.getElementById('main-content').scrollTop = 0;
+  renderBankTable();
+}
+function goStep1() {
+  document.getElementById('step1-wrap').style.display = '';
+  document.getElementById('step2-wrap').style.display = 'none';
+}
+function saveAll() {
+  const firstRow = bankRows.find(r => r.method === currentPayMethod) || bankRows[0];
+  const newRow = {
+    id: Date.now(),
+    channel: step1Data.channel,
+    bank: firstRow ? firstRow.bankName : '—',
+    payMethod: currentPayMethod,
+    currency: firstRow ? (firstRow.currency || '—') : '—',
+    bizType: firstRow ? (firstRow.bizType || '—') : '—',
+    merchantType: firstRow ? (firstRow.merchantType || '—') : '—',
+    templateName: firstRow && firstRow.templates.length ? firstRow.templates.map(t=>t.name).join(', ') : step1Data.name,
+    status: step1Data.status
+  };
+  tableData.unshift(newRow);
+  filteredData = [...tableData];
+  renderTable();
+  showView('view-list');
+  showToast('配置保存成功','success');
+}
+
+// ===================================================
+// STEP 2 - PAY TABS & BANK TABLE
+// ===================================================
+function switchPayTab(el) {
+  document.querySelectorAll('.pay-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentPayMethod = el.dataset.method;
+  renderBankTable();
+}
+
+function renderBankTable() {
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const tbody = document.getElementById('bank-body');
+  const empty = document.getElementById('bank-empty');
+  if (!rows.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = rows.map((row,idx) => `
+    <tr>
+      <td style="font-size:13px;line-height:1.5;max-width:200px;white-space:normal">${row.bankName}</td>
+      <td>
+        <span class="inline-edit-val">${row.currency||'—'}</span>
+        <span class="inline-edit-btn" onclick="inlineEdit('currency','${row.bankId}',${idx})">编辑</span>
+      </td>
+      <td>
+        <span class="inline-edit-val">${row.country||'—'}</span>
+        <span class="inline-edit-btn" onclick="inlineEdit('country','${row.bankId}',${idx})">编辑</span>
+      </td>
+      <td>
+        <span class="inline-edit-val">${row.merchantType||'—'}</span>
+        <span class="inline-edit-btn" onclick="inlineEdit('merchantType','${row.bankId}',${idx})">编辑</span>
+      </td>
+      <td>
+        <span class="inline-edit-val">${row.bizType||'—'}</span>
+        <span class="inline-edit-btn" onclick="inlineEdit('bizType','${row.bankId}',${idx})">编辑</span>
+      </td>
+      <td>
+        <div class="tpl-cell">
+          ${(row.templates||[]).map(t=>`<span class="tpl-tag">${t.name}<span class="tpl-remove" onclick="removeTpl('${row.bankId}',${idx},'${t.id}')">×</span></span>`).join('')}
+          <span class="inline-edit-btn" onclick="openTplDrawer('${row.bankId}',${idx})">编辑</span>
+        </div>
+      </td>
+      <td>
+        <span class="inline-edit-btn" onclick="dupBankRow('${row.bankId}',${idx})">新增</span>
+        &nbsp;
+        <span class="inline-del-btn" onclick="delBankRow('${row.bankId}',${idx})">删除</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function delBankRow(bankId, idx) {
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const target = rows[idx];
+  if (target) {
+    const globalIdx = bankRows.indexOf(target);
+    bankRows.splice(globalIdx, 1);
+  }
+  renderBankTable();
+}
+
+function dupBankRow(bankId, idx) {
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const orig = rows[idx];
+  if (orig) {
+    bankRows.push({ ...orig, templates:[], currency:'', country:'', merchantType:'', bizType:'', bankId: bankId+'_'+Date.now() });
+    renderBankTable();
+  }
+}
+
+// ===================================================
+// INLINE EDIT
+// ===================================================
+let inlineRowIdx = null;
+
+const INLINE_OPTIONS = {
+  currency: ['USD','EUR','GBP','CNY','JPY','HKD','SGD','KRW','VND'],
+  country: ['中国 (CN)','美国 (US)','英国 (GB)','越南 (VN)','韩国 (KR)','新加坡 (SG)','印度 (IN)','日本 (JP)'],
+  merchantType: ['个人','企业','个人,企业'],
+  bizType: ['收款','付款','换汇'],
+};
+const INLINE_TITLES = {
+  currency:'编辑适用收款币种', country:'编辑适用收款国家/地区',
+  merchantType:'编辑商户类型', bizType:'编辑业务类型'
+};
+
+function inlineEdit(field, bankId, idx) {
+  inlineField = field;
+  inlineBankId = bankId;
+  inlineRowIdx = idx;
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const row = rows[idx];
+  const current = row ? (row[field] || '') : '';
+  document.getElementById('inline-modal-title').textContent = INLINE_TITLES[field] || '编辑';
+  const opts = INLINE_OPTIONS[field] || [];
+  document.getElementById('inline-modal-body').innerHTML = `
+    <select class="s1-input" id="inline-select" style="width:100%;height:38px">
+      <option value="">请选择</option>
+      ${opts.map(o=>`<option value="${o}" ${current===o?'selected':''}>${o}</option>`).join('')}
+    </select>
+  `;
+  openModal('inline-modal');
+}
+
+function saveInlineEdit() {
+  const val = document.getElementById('inline-select').value;
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const row = rows[inlineRowIdx];
+  if (row) { row[inlineField] = val; }
+  closeModal('inline-modal');
+  renderBankTable();
+}
+
+// ===================================================
+// BANK SELECT MODAL
+// ===================================================
+function openBankSelect() {
+  const existingIds = bankRows.filter(r => r.method === currentPayMethod).map(r => r.bankId.split('_')[0]);
+  tempSelectedBanks = [...new Set(existingIds)];
+  renderBankList('');
+  openModal('bank-modal');
+}
+function renderBankList(q) {
+  const list = ALL_BANKS.filter(b => !q || b.name.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('bank-list').innerHTML = list.map(b => `
+    <div class="bank-list-item ${tempSelectedBanks.includes(b.id)?'selected':''}" onclick="toggleBankSelect('${b.id}',this)">
+      <input type="checkbox" ${tempSelectedBanks.includes(b.id)?'checked':''} onclick="return false">
+      <span>${b.name}</span>
+    </div>
+  `).join('');
+}
+function filterBankList(q) { renderBankList(q); }
+function toggleBankSelect(bankId, el) {
+  if (tempSelectedBanks.includes(bankId)) {
+    tempSelectedBanks = tempSelectedBanks.filter(id => id !== bankId);
+    el.classList.remove('selected'); el.querySelector('input').checked = false;
+  } else {
+    tempSelectedBanks.push(bankId);
+    el.classList.add('selected'); el.querySelector('input').checked = true;
+  }
+}
+function confirmBankSelect() {
+  const existingIds = bankRows.filter(r => r.method === currentPayMethod).map(r => r.bankId.split('_')[0]);
+  // remove deselected
+  bankRows = bankRows.filter(r => !(r.method === currentPayMethod && !tempSelectedBanks.includes(r.bankId.split('_')[0])));
+  // add new
+  tempSelectedBanks.forEach(id => {
+    if (!existingIds.includes(id)) {
+      const b = ALL_BANKS.find(b => b.id === id);
+      bankRows.push({ bankId:id, bankName:b.name, method:currentPayMethod, currency:'', country:'', merchantType:'企业', bizType:'', templates:[] });
+    }
+  });
+  closeModal('bank-modal');
+  renderBankTable();
+}
+
+// ===================================================
+// TEMPLATE DRAWER
+// ===================================================
+let drawerRowIdx = null;
+
+function openTplDrawer(bankId, idx) {
+  drawerTargetBankId = bankId;
+  drawerRowIdx = idx;
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const row = rows[idx];
+  drawerSelectedTpls = row ? [...(row.templates||[]).map(t=>t.id)] : [];
+  renderTplList('');
+  document.getElementById('tpl-drawer').classList.add('open');
+}
+function closeDrawer() { document.getElementById('tpl-drawer').classList.remove('open'); }
+function renderTplList(q) {
+  const list = TEMPLATES.filter(t => !q || t.name.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('tpl-list').innerHTML = list.map(t => `
+    <div class="tpl-item ${drawerSelectedTpls.includes(t.id)?'selected':''}" onclick="toggleTpl('${t.id}',this)">
+      <input type="checkbox" ${drawerSelectedTpls.includes(t.id)?'checked':''} onclick="return false">
+      <div>
+        <div class="tpl-item-name">${t.name}</div>
+        <div class="tpl-item-desc">${t.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+function filterTplList(q) { renderTplList(q); }
+function toggleTpl(tplId, el) {
+  if (drawerSelectedTpls.includes(tplId)) {
+    drawerSelectedTpls = drawerSelectedTpls.filter(id => id !== tplId);
+    el.classList.remove('selected'); el.querySelector('input').checked = false;
+  } else {
+    drawerSelectedTpls.push(tplId);
+    el.classList.add('selected'); el.querySelector('input').checked = true;
+  }
+}
+function confirmTplSelect() {
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const row = rows[drawerRowIdx];
+  if (row) { row.templates = drawerSelectedTpls.map(id => TEMPLATES.find(t => t.id === id)).filter(Boolean); }
+  closeDrawer();
+  renderBankTable();
+  showToast('模板配置已更新','success');
+}
+function removeTpl(bankId, idx, tplId) {
+  const rows = bankRows.filter(r => r.method === currentPayMethod);
+  const row = rows[idx];
+  if (row) { row.templates = row.templates.filter(t => t.id !== tplId); }
+  renderBankTable();
+}
+
+// ===================================================
+// MODAL HELPERS
+// ===================================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+document.getElementById('tpl-drawer').addEventListener('click', e => {
+  if (e.target === document.getElementById('tpl-drawer')) closeDrawer();
+});
+
+// ===================================================
+// TOAST
+// ===================================================
+function showToast(msg, type='info') {
+  const c = document.getElementById('toast-container');
+  const icons = {success:'✓',error:'✕',info:'ℹ'};
+  const colors = {success:'var(--success)',error:'var(--danger)',info:'var(--primary)'};
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span style="color:${colors[type]};font-size:16px;font-weight:700">${icons[type]}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+
+// ===================================================
+// INIT
+// ===================================================
+renderTable();
+</script>
+</body>
+</html>
